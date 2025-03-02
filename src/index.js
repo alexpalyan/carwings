@@ -1,4 +1,4 @@
-import { createCipheriv } from 'crypto';
+import Blowfish from 'blowfish-node';
 import _ from 'lodash/fp';
 import axios from 'axios';
 import querystring from 'querystring';
@@ -31,13 +31,9 @@ export async function api(action, data) {
   }
 }
 
-const blowpassword = _.curry((key, plainpass) => {
-  let cipher = createCipheriv('bf-ecb', key, '');
-
-  let encpass = cipher.update(plainpass, 'utf8', 'base64');
-  encpass += cipher.final('base64');
-
-  return encpass;
+const blowpassword = _.curry((passwordEncryptionKey, password) => {
+  const bf = new Blowfish(passwordEncryptionKey, Blowfish.MODE.ECB);
+  return bf.encodeToBase64(password)
 });
 
 function getsessionid(profile) {
