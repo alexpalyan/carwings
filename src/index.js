@@ -8,7 +8,7 @@ axios.defaults.baseURL = 'https://gdcportalgw.its-mo.com';
 
 process.on('unhandledRejection', r => console.log(r));
 
-const initial_app_strings = 'geORNtsZe5I4lRGjG9GZiA';
+const initial_app_str = '9s5rfKVuMrT03RtzajWNcA';
 const defaultRegionCode = 'NNA';
 const lg = 'en-US';
 const tz = 'America/Denver';
@@ -20,7 +20,7 @@ function sleep(ms = 0) {
 }
 
 export async function api(action, data) {
-  let resp = await axios.post(`/gworchest_160803A/gdc/${action}.php`, querystring.stringify(data));
+  let resp = await axios.post(`/api_v230317_NE/gdc/${action}.php`, querystring.stringify(data));
 
   if(resp.data.status === 200) {
     console.log(`🍃 api ${action} 👍`);
@@ -60,7 +60,7 @@ const acompose = (fn, ...rest) =>
 
 const challenge = acompose(
   r => r.baseprm,
-  () => api('InitialApp', { initial_app_strings }),
+  () => api('InitialApp_v2', { initial_app_str }),
 );
 
 
@@ -76,7 +76,7 @@ const genCredentials = async (UserId, password, RegionCode = defaultRegionCode) 
 // apiCredentials => profile
 const userLogin = async (credentials) => {
   return await api('UserLoginRequest', {
-	  initial_app_strings,
+	  initial_app_str,
     ...credentials
   });
 };
@@ -138,7 +138,7 @@ exports.batteryStatusCheck = batterystatuscheck;
 
   /*
   data = await api('InitialApp', {
-    initial_app_strings
+    initial_app_str
   });
   const key = data.baseprm;
 
@@ -146,7 +146,7 @@ exports.batteryStatusCheck = batterystatuscheck;
     RegionCode,
     UserId: 'email@example.com',
     Password: blowpassword('Tr0ub4dor&3', key),
-    initial_app_strings
+    initial_app_str
   });
   */
 
