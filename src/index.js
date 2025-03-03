@@ -4,6 +4,7 @@ import axios from 'axios';
 import querystring from 'querystring';
 
 axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded';
+axios.defaults.headers.common['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.3';
 axios.defaults.baseURL = 'https://gdcportalgw.its-mo.com';
 
 process.on('unhandledRejection', r => console.log(r));
@@ -73,6 +74,7 @@ const genCredentials = async (UserId, password, RegionCode = defaultRegionCode) 
 const userLogin = async (credentials) => {
   return await api('UserLoginRequest', {
 	  initial_app_str,
+    lg,
     ...credentials
   });
 };
