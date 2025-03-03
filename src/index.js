@@ -118,6 +118,8 @@ const hvacon = session => longpollrequest('ACRemoteRequest', 'ACRemoteResult', s
 const hvacoff = session => longpollrequest('ACRemoteOffRequest', 'ACRemoteOffResult', session);
 const hvacstatus = session => session('RemoteACRecordsRequest');
 
+const cabintemp = session => longpollrequest('GetInteriorTemperatureRequestForNsp', 'GetInteriorTemperatureResultForNsp', session)
+
 
 //Create the api session
 exports.loginSession = loginSession;
@@ -127,6 +129,7 @@ exports.hvacStatus = hvacstatus;
 exports.batteryRecords = batteryrecords;
 exports.batteryStatusCheckRequest = batterystatuscheckrequest;
 exports.batteryStatusCheck = batterystatuscheck;
+exports.cabinTemp = cabintemp;
 
 //(async function() {
   //let session = await loginSession('bobbytables@gmail.com', 'Tr0ub4dor&3');
