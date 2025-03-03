@@ -84,13 +84,16 @@ const authenticate = acompose(userLogin, genCredentials);
 
 // rawCredentials => (apioperation => apiresults)
 const loginSession = acompose(
-  s => async (action) => await api(action, { ...s }),
-  p => ({ custom_sessionid: getsessionid(p), VIN: getvin(p), RegionCode: getregioncode(p) }),
+  s => async (action, args) => await api(action, { ...s, ...args }),
+  p => ({ custom_sessionid: getsessionid(p), VIN: getvin(p), RegionCode: getregioncode(p)}),
   authenticate,
 );
 
 const pollresult = _.curry(async (session, action, resultKey) => {
   let result;
+  if (resultKey === "NoNMA") {
+    return {resultKey}
+  }
   do {
     await sleep(5000);
     result = await session(action, { resultKey });
