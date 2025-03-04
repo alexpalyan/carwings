@@ -112,7 +112,8 @@ const longpollrequest = _.curry((action, pollaction, session) => {
 
 const batteryrecords = session => session('BatteryStatusRecordsRequest');
 const batterystatuscheckrequest = session => session('BatteryStatusCheckRequest');
-const batterystatuscheck = session => longpollrequest('BatteryStatusCheckResultRequest', 'BatteryStatusCheckResultRequest', session);
+const batterystatuscheck = session => longpollrequest('BatteryStatusCheckRequest', 'BatteryStatusCheckResultRequest', session);
+const batterystartcharging = session => session('BatteryRemoteChargingRequest');
 
 const hvacon = session => longpollrequest('ACRemoteRequest', 'ACRemoteResult', session);
 const hvacoff = session => longpollrequest('ACRemoteOffRequest', 'ACRemoteOffResult', session);
@@ -129,6 +130,7 @@ exports.hvacStatus = hvacstatus;
 exports.batteryRecords = batteryrecords;
 exports.batteryStatusCheckRequest = batterystatuscheckrequest;
 exports.batteryStatusCheck = batterystatuscheck;
+exports.batteryStartCharging = batterystartcharging;
 exports.cabinTemp = cabintemp;
 
 //(async function() {
