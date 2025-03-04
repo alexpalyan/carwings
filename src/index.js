@@ -1,40 +1,51 @@
-import Blowfish from 'blowfish-node';
-import _ from 'lodash/fp';
-import axios from 'axios';
-import querystring from 'querystring';
+import Blowfish from "blowfish-node";
+import _ from "lodash/fp";
+import axios from "axios";
+import querystring from "querystring";
 
-axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded';
-axios.defaults.headers.common['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.3';
-axios.defaults.baseURL = 'https://gdcportalgw.its-mo.com';
+axios.defaults.headers.post["Content-Type"] =
+  "application/x-www-form-urlencoded";
+axios.defaults.headers.common["User-Agent"] =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.3";
+axios.defaults.baseURL = "https://gdcportalgw.its-mo.com";
 
-process.on('unhandledRejection', r => console.log(r));
+process.on("unhandledRejection", (r) => console.log(r));
 
-const initial_app_str = '9s5rfKVuMrT03RtzajWNcA';
-const defaultRegionCode = 'NNA';
-const lg = 'en-US';
-const tz = 'America/Denver';
+const initial_app_str = "9s5rfKVuMrT03RtzajWNcA";
+const defaultRegionCode = "NNA";
+const lg = "en-US";
+const tz = "America/Denver";
 
-const tlog = t => _.thru(d => { console.log(t, d); return d; });
+const tlog = (t) =>
+  _.thru((d) => {
+    console.log(t, d);
+    return d;
+  });
 
 function sleep(ms = 0) {
-  return new Promise(r => setTimeout(r, ms));
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 export async function api(action, data) {
-  let resp = await axios.post(`/api_v230317_NE/gdc/${action}.php`, querystring.stringify(data));
+  let resp = await axios.post(
+    `/api_v230317_NE/gdc/${action}.php`,
+    querystring.stringify(data),
+  );
 
-  if(resp.data.status === 200) {
+  if (resp.data.status === 200) {
     console.log(`🍃 api ${action} 👍`);
+  } else if (resp.data.status === 401) {
+    console.log(`api ${action} 🚫`);
     return resp.data;
   } else {
     console.log(`api ${action} 👎\r\n`, resp);
-    throw new Error(resp.data.ErrorMessage);
   }
+  return resp.data;
 }
 
 const blowpassword = _.curry((passwordEncryptionKey, password) => {
   const bf = new Blowfish(passwordEncryptionKey, Blowfish.MODE.ECB);
-  return bf.encodeToBase64(password)
+  return bf.encodeToBase64(password);
 });
 
 function getsessionid(profile) {
@@ -46,36 +57,35 @@ function getvin(profile) {
 }
 
 function getregioncode(profile) {
-	return profile.CustomerInfo.RegionCode;
+  return profile.CustomerInfo.RegionCode;
 }
 
 const acompose = (fn, ...rest) =>
-  rest.length
-    ? async (...args) =>
-        fn(await acompose(...rest)(...args))
-    : fn;
+  rest.length ? async (...args) => fn(await acompose(...rest)(...args)) : fn;
 
 const challenge = acompose(
-  r => r.baseprm,
-  () => api('InitialApp_v2', { initial_app_str }),
+  (r) => r.baseprm,
+  () => api("InitialApp_v2", { initial_app_str }),
 );
 
-
-
 // rawCredentials => apiCredentials
-const genCredentials = async (UserId, password, RegionCode = defaultRegionCode) => {
+const genCredentials = async (
+  UserId,
+  password,
+  RegionCode = defaultRegionCode,
+) => {
   return _.compose(
-    Password => ({ UserId, Password, RegionCode }),
+    (Password) => ({ UserId, Password, RegionCode }),
     blowpassword(await challenge()),
   )(password);
 };
 
 // apiCredentials => profile
 const userLogin = async (credentials) => {
-  return await api('UserLoginRequest', {
-	  initial_app_str,
+  return await api("UserLoginRequest", {
+    initial_app_str,
     lg,
-    ...credentials
+    ...credentials,
   });
 };
 
@@ -84,20 +94,26 @@ const authenticate = acompose(userLogin, genCredentials);
 
 // rawCredentials => (apioperation => apiresults)
 const loginSession = acompose(
-  s => async (action, args) => await api(action, { ...s, ...args }),
-  p => ({ custom_sessionid: getsessionid(p), VIN: getvin(p), RegionCode: getregioncode(p)}),
+  (s) => async (action, args) => await api(action, { ...s, ...args }),
+  (p) => ({
+    custom_sessionid: getsessionid(p),
+    VIN: getvin(p),
+    RegionCode: getregioncode(p),
+  }),
   authenticate,
 );
 
 const pollresult = _.curry(async (session, action, resultKey) => {
   let result;
   if (resultKey === "NoNMA") {
-    return {resultKey}
+    return { resultKey };
   }
+  let i = 0;
   do {
     await sleep(5000);
     result = await session(action, { resultKey });
-  } while(result.responseFlag !== '1');
+    i++;
+  } while (result.responseFlag !== "1" || i > 20);
 
   return result;
 });
@@ -105,22 +121,35 @@ const pollresult = _.curry(async (session, action, resultKey) => {
 const longpollrequest = _.curry((action, pollaction, session) => {
   return acompose(
     pollresult(session, pollaction),
-    r => r.resultKey,
+    (r) => r.resultKey,
     () => session(action),
   )();
 });
 
-const batteryrecords = session => session('BatteryStatusRecordsRequest');
-const batterystatuscheckrequest = session => session('BatteryStatusCheckRequest');
-const batterystatuscheck = session => longpollrequest('BatteryStatusCheckRequest', 'BatteryStatusCheckResultRequest', session);
-const batterystartcharging = session => session('BatteryRemoteChargingRequest');
+const batteryrecords = (session) => session("BatteryStatusRecordsRequest");
+const batterystatuscheckrequest = (session) =>
+  session("BatteryStatusCheckRequest");
+const batterystatuscheck = (session) =>
+  longpollrequest(
+    "BatteryStatusCheckRequest",
+    "BatteryStatusCheckResultRequest",
+    session,
+  );
+const batterystartcharging = (session) =>
+  session("BatteryRemoteChargingRequest");
 
-const hvacon = session => longpollrequest('ACRemoteRequest', 'ACRemoteResult', session);
-const hvacoff = session => longpollrequest('ACRemoteOffRequest', 'ACRemoteOffResult', session);
-const hvacstatus = session => session('RemoteACRecordsRequest');
+const hvacon = (session) =>
+  longpollrequest("ACRemoteRequest", "ACRemoteResult", session);
+const hvacoff = (session) =>
+  longpollrequest("ACRemoteOffRequest", "ACRemoteOffResult", session);
+const hvacstatus = (session) => session("RemoteACRecordsRequest");
 
-const cabintemp = session => longpollrequest('GetInteriorTemperatureRequestForNsp', 'GetInteriorTemperatureResultForNsp', session)
-
+const cabintemp = (session) =>
+  longpollrequest(
+    "GetInteriorTemperatureRequestForNsp",
+    "GetInteriorTemperatureResultForNsp",
+    session,
+  );
 
 //Create the api session
 exports.loginSession = loginSession;
@@ -134,15 +163,15 @@ exports.batteryStartCharging = batterystartcharging;
 exports.cabinTemp = cabintemp;
 
 //(async function() {
-  //let session = await loginSession('bobbytables@gmail.com', 'Tr0ub4dor&3');
+//let session = await loginSession('bobbytables@gmail.com', 'Tr0ub4dor&3');
 
-  //let data = await batteryrecords(session);
+//let data = await batteryrecords(session);
 
-  //let data = await hvacon(session);
+//let data = await hvacon(session);
 
-  //let carsession = data => session({ ...data, profile.VehicleInfoList.vehicleInfo[0].vin });
+//let carsession = data => session({ ...data, profile.VehicleInfoList.vehicleInfo[0].vin });
 
-  /*
+/*
   data = await api('InitialApp', {
     initial_app_str
   });
@@ -156,7 +185,7 @@ exports.cabinTemp = cabintemp;
   });
   */
 
-  /*
+/*
   data = await api('BatteryStatusRecordsRequest', {
     RegionCode,
     VIN,
@@ -164,7 +193,7 @@ exports.cabinTemp = cabintemp;
   });
   */
 
-  /*
+/*
   data = await api('BatteryStatusCheckRequest', {
     RegionCode,
     VIN,
@@ -172,7 +201,7 @@ exports.cabinTemp = cabintemp;
   });
   */
 
-  /*
+/*
   data = await api('BatteryStatusCheckResultRequest', {
     RegionCode,
     VIN,
@@ -181,7 +210,7 @@ exports.cabinTemp = cabintemp;
   });
   */
 
-  /*
+/*
   data = await api('RemoteACRecordsRequest', {
     RegionCode,
     VIN,
@@ -190,7 +219,7 @@ exports.cabinTemp = cabintemp;
   });
   */
 
-  /*
+/*
   data = await api('GetScheduledACRemoteRequest', {
     RegionCode,
     VIN,
@@ -199,7 +228,7 @@ exports.cabinTemp = cabintemp;
   });
   */
 
-  /*
+/*
   data = await api('ACRemoteRequest', {
     RegionCode,
     VIN,
@@ -221,7 +250,7 @@ exports.cabinTemp = cabintemp;
   } while(data.responseFlag !== '1')
   */
 
-  /*
+/*
   data = await api('ACRemoteOffRequest', {
     RegionCode,
     VIN,
@@ -243,6 +272,5 @@ exports.cabinTemp = cabintemp;
   } while(data.responseFlag !== '1')
   */
 
-
-  //console.log(data);
+//console.log(data);
 //}());
