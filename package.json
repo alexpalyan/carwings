@@ -79,7 +79,7 @@
   },
   "dependencies": {
     "asyncp": "^0.8.0",
-    "axios": "^0.15.3",
+    "axios": "^1.8.0",
     "lodash": "^4.17.2",
     "blowfish-node": "1.1.4"
   },
